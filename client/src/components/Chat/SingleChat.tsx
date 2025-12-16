@@ -34,7 +34,7 @@ interface SingleChatProps {
 
 const ENDPOINT = import.meta.env.MODE === "development" 
   ? "http://localhost:5000" 
-  : "https://chatpulse-server.onrender.com"; 
+  : "https://chatpulse-server-oxb9.onrender.com"; 
 
 let socket: Socket;
 
