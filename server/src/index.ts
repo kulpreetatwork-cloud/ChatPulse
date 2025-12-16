@@ -16,8 +16,12 @@ dotenv.config();
 const app = express();
 
 // 3. Middlewares
+// 3. Middlewares
 app.use(cors({
-    origin: "http://localhost:5173", // Frontend URL
+    origin: [
+        "http://localhost:5173", 
+        "https://chat-pulse-seven.vercel.app/" // <--- ADD YOUR VERCEL DOMAIN HERE
+    ],
     credentials: true
 }));
 app.use(express.json()); 
