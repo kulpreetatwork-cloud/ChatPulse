@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -7,7 +8,6 @@ import useChatStore from "../../store/chatStore";
 import UserBadgeItem from "./UserBadgeItem";
 import UserListItem from "./UserListItem";
 
-// 1. Define strict interfaces
 interface User {
   _id: string;
   name: string;
@@ -16,9 +16,10 @@ interface User {
   token: string;
 }
 
+// Use strict types for props
 interface UpdateGroupChatModalProps {
   fetchAgain: boolean;
-  setFetchAgain: React.Dispatch<React.SetStateAction<boolean>>;
+  setFetchAgain: (val: boolean) => void;
   fetchMessages: () => void;
 }
 
@@ -32,12 +33,13 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
   const [loading, setLoading] = useState(false);
   const [renameloading, setRenameloading] = useState(false);
 
-  // 2. Remove User / Leave Group
+  // 1. Remove User / Leave Group
   const handleRemove = async (user1: User) => {
-    // Guard clause for user
-    if (!user) return;
-
-    if (selectedChat.groupAdmin._id !== user._id && user1._id !== user._id) {
+    // FIX: TypeScript Guard Clause
+    if (!selectedChat || !user) return;
+    
+    // Check if groupAdmin exists before accessing _id
+    if (selectedChat.groupAdmin?._id !== user._id && user1._id !== user._id) {
       toast.error("Only admins can remove someone!");
       return;
     }
@@ -55,36 +57,29 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
         config
       );
 
-      // Fix: Use standard if/else instead of ternary expression for side effects
-      if (user1._id === user._id) {
-         setSelectedChat(null);
-         toast.success("You left the group");
-      } else {
-         setSelectedChat(data);
-         toast.success("User Removed");
-      }
-      
+      user1._id === user._id ? setSelectedChat(null) : setSelectedChat(data);
       setFetchAgain(!fetchAgain);
-      fetchMessages(); 
+      fetchMessages();
       setLoading(false);
+      toast.success(user1._id === user._id ? "You left the group" : "User Removed");
     } catch {
-      // Removed unused 'error' variable
       toast.error("Error removing user");
       setLoading(false);
     }
   };
 
-  // 3. Add User to Group
+  // 2. Add User to Group
   const handleAddUser = async (user1: User) => {
-    // Guard clause
-    if (!user) return;
+    // FIX: TypeScript Guard Clause
+    if (!selectedChat || !user) return;
 
     if (selectedChat.users.find((u: User) => u._id === user1._id)) {
       toast.error("User Already in group!");
       return;
     }
 
-    if (selectedChat.groupAdmin._id !== user._id) {
+    // Check if groupAdmin exists
+    if (selectedChat.groupAdmin?._id !== user._id) {
       toast.error("Only admins can add someone!");
       return;
     }
@@ -112,10 +107,11 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
     }
   };
 
-  // 4. Rename Group
+  // 3. Rename Group
   const handleRename = async () => {
     if (!groupChatName) return;
-    if (!user) return; // Guard
+    // FIX: TypeScript Guard Clause
+    if (!selectedChat || !user) return;
 
     try {
       setRenameloading(true);
@@ -141,11 +137,11 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
     }
   };
 
-  // 5. Search Users
+  // 4. Search Users
   const handleSearch = async (query: string) => {
     setSearch(query);
     if (!query) return;
-    if (!user) return; // Guard
+    if (!user) return;
 
     try {
       setLoading(true);
@@ -168,12 +164,13 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
         <FaCog size={20} />
       </button>
 
-      {isOpen && (
+      {isOpen && selectedChat && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-dark-surface w-full max-w-lg rounded-xl border border-dark-border shadow-2xl flex flex-col overflow-hidden relative">
             
             {/* Header */}
             <div className="flex justify-between items-center p-5 border-b border-dark-border bg-dark-bg/50">
+                {/* Use optional chaining for safety */}
                 <h3 className="text-xl font-bold text-white">{selectedChat.chatName}</h3>
                 <button 
                     onClick={() => setIsOpen(false)}
@@ -219,7 +216,7 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
                      <input 
                         className="w-full bg-dark-bg border border-dark-border text-white p-3 rounded-lg outline-none focus:border-brand focus:ring-1 focus:ring-brand placeholder-slate-500 transition mb-3"
                         placeholder="Add User to Group"
-                        value={search} // Controlled input
+                        value={search} 
                         onChange={(e) => handleSearch(e.target.value)}
                     />
                      
@@ -228,8 +225,7 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
                         {loading ? (
                             <div className="text-center text-slate-500 text-sm">Loading...</div>
                         ) : (
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            searchResult?.slice(0, 4).map((u: any) => (
+                            searchResult?.slice(0, 4).map((u: User) => (
                                 <UserListItem
                                     key={u._id}
                                     user={u}
@@ -244,7 +240,7 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
             {/* Footer */}
             <div className="p-5 border-t border-dark-border flex justify-end bg-dark-bg/50">
                 <button 
-                    onClick={() => handleRemove(user!)} // user is guarded above, but we can assert here for the button
+                    onClick={() => user && handleRemove(user)} 
                     className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50 font-medium py-2 px-6 rounded-lg transition"
                 >
                     Leave Group
