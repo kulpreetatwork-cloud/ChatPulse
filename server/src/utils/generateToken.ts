@@ -14,6 +14,8 @@ const generateTokenAndSetCookie = (userId: any, res: Response) => {
     sameSite: "strict", // CSRF protection
     secure: process.env.NODE_ENV !== "development", // HTTPS only in production
   });
+
+  return token;
 };
 
 export default generateTokenAndSetCookie;

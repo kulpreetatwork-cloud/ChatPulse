@@ -29,12 +29,13 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
     });
 
     if (user) {
-      generateTokenAndSetCookie(user._id, res); // Send the cookie
+      const token = generateTokenAndSetCookie(user._id, res); // Send the cookie
       res.status(201).json({
         _id: user._id,
         name: user.name,
         email: user.email,
         pic: user.pic,
+        token,
       });
     } else {
       res.status(400).json({ message: "Failed to create user" });
@@ -54,12 +55,13 @@ export const authUser = async (req: Request, res: Response): Promise<void> => {
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {
-      generateTokenAndSetCookie(user._id, res); // Send the cookie
+      const token = generateTokenAndSetCookie(user._id, res); // Send the cookie
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
         pic: user.pic,
+        token,
       });
     } else {
       res.status(401).json({ message: "Invalid email or password" });
