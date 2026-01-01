@@ -43,15 +43,6 @@
 
 ---
 
-## 🖼️ Screenshots
-
-<div align="center">
-  <img src="https://via.placeholder.com/800x450/1e1e2e/6366f1?text=ChatPulse+Chat+Interface" alt="Chat Interface" width="80%" />
-  <p><em>Premium chat interface with glassmorphism design</em></p>
-</div>
-
----
-
 ## 🛠️ Tech Stack
 
 ### Frontend
@@ -214,12 +205,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
