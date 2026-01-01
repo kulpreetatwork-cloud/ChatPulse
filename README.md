@@ -12,7 +12,10 @@
   [![Socket.IO](https://img.shields.io/badge/Socket.IO-Realtime-010101?style=flat-square&logo=socket.io)](https://socket.io/)
   [![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
   
-  [Live Demo](#) • [Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started)
+  🌐 **[Live Demo](https://chat-pulse-seven.vercel.app/)** • [Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started)
+  
+  [![Frontend](https://img.shields.io/badge/Frontend-Vercel-000000?style=flat-square&logo=vercel)](https://chat-pulse-seven.vercel.app/)
+  [![Backend](https://img.shields.io/badge/Backend-Render-46E3B7?style=flat-square&logo=render)](https://chatpulse-server-oxb9.onrender.com)
   
 </div>
 
