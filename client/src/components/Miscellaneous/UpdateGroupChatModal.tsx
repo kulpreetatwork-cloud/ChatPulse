@@ -2,8 +2,7 @@
 import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { AiOutlineClose } from "react-icons/ai";
-import { FaCog } from "react-icons/fa";
+import { FaTimes, FaCog, FaSpinner, FaUserPlus, FaEdit, FaSignOutAlt } from "react-icons/fa";
 import useChatStore from "../../store/chatStore";
 import UserBadgeItem from "./UserBadgeItem";
 import UserListItem from "./UserListItem";
@@ -16,7 +15,6 @@ interface User {
   token: string;
 }
 
-// Use strict types for props
 interface UpdateGroupChatModalProps {
   fetchAgain: boolean;
   setFetchAgain: (val: boolean) => void;
@@ -31,23 +29,20 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
   const [search, setSearch] = useState("");
   const [searchResult, setSearchResult] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-  const [renameloading, setRenameloading] = useState(false);
+  const [renameLoading, setRenameLoading] = useState(false);
 
-  // 1. Remove User / Leave Group
   const handleRemove = async (user1: User) => {
-    // FIX: TypeScript Guard Clause
     if (!selectedChat || !user) return;
-    
-    // Check if groupAdmin exists before accessing _id
+
     if (selectedChat.groupAdmin?._id !== user._id && user1._id !== user._id) {
-      toast.error("Only admins can remove someone!");
+      toast.error("Only admins can remove members");
       return;
     }
 
     try {
       setLoading(true);
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      
+
       const { data } = await axios.put(
         `/api/chat/groupremove`,
         {
@@ -61,33 +56,31 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
       setFetchAgain(!fetchAgain);
       fetchMessages();
       setLoading(false);
-      toast.success(user1._id === user._id ? "You left the group" : "User Removed");
+      toast.success(user1._id === user._id ? "You left the group" : "Member removed");
+      if (user1._id === user._id) setIsOpen(false);
     } catch {
-      toast.error("Error removing user");
+      toast.error("Error removing member");
       setLoading(false);
     }
   };
 
-  // 2. Add User to Group
   const handleAddUser = async (user1: User) => {
-    // FIX: TypeScript Guard Clause
     if (!selectedChat || !user) return;
 
     if (selectedChat.users.find((u: User) => u._id === user1._id)) {
-      toast.error("User Already in group!");
+      toast.error("User already in group");
       return;
     }
 
-    // Check if groupAdmin exists
     if (selectedChat.groupAdmin?._id !== user._id) {
-      toast.error("Only admins can add someone!");
+      toast.error("Only admins can add members");
       return;
     }
 
     try {
       setLoading(true);
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      
+
       const { data } = await axios.put(
         `/api/chat/groupadd`,
         {
@@ -100,23 +93,23 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
       setSelectedChat(data);
       setFetchAgain(!fetchAgain);
       setLoading(false);
-      toast.success("User Added!");
+      setSearch("");
+      setSearchResult([]);
+      toast.success("Member added!");
     } catch {
-      toast.error("Error Adding User");
+      toast.error("Error adding member");
       setLoading(false);
     }
   };
 
-  // 3. Rename Group
   const handleRename = async () => {
-    if (!groupChatName) return;
-    // FIX: TypeScript Guard Clause
+    if (!groupChatName.trim()) return;
     if (!selectedChat || !user) return;
 
     try {
-      setRenameloading(true);
+      setRenameLoading(true);
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      
+
       const { data } = await axios.put(
         `/api/chat/rename`,
         {
@@ -128,19 +121,21 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
 
       setSelectedChat(data);
       setFetchAgain(!fetchAgain);
-      setRenameloading(false);
-      setGroupChatName(""); 
-      toast.success("Group Name Updated!");
+      setRenameLoading(false);
+      setGroupChatName("");
+      toast.success("Group renamed!");
     } catch {
-      toast.error("Rename Failed");
-      setRenameloading(false);
+      toast.error("Rename failed");
+      setRenameLoading(false);
     }
   };
 
-  // 4. Search Users
   const handleSearch = async (query: string) => {
     setSearch(query);
-    if (!query) return;
+    if (!query) {
+      setSearchResult([]);
+      return;
+    }
     if (!user) return;
 
     try {
@@ -151,100 +146,122 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }: Upda
       setSearchResult(data);
     } catch {
       setLoading(false);
-      toast.error("Failed to load search results");
+      toast.error("Search failed");
     }
   };
 
   return (
     <>
-      <button 
-        onClick={() => setIsOpen(true)} 
-        className="p-2 text-slate-400 hover:text-brand transition hover:bg-dark-hover rounded-full"
+      <button
+        onClick={() => setIsOpen(true)}
+        className="p-2 text-slate-400 hover:text-brand hover:bg-dark-hover rounded-xl transition"
       >
-        <FaCog size={20} />
+        <FaCog size={18} />
       </button>
 
       {isOpen && selectedChat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-dark-surface w-full max-w-lg rounded-xl border border-dark-border shadow-2xl flex flex-col overflow-hidden relative">
-            
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in"
+          onClick={() => setIsOpen(false)}
+        >
+          <div
+            className="bg-dark-surface w-full max-w-md rounded-2xl border border-dark-border shadow-premium overflow-hidden animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
-            <div className="flex justify-between items-center p-5 border-b border-dark-border bg-dark-bg/50">
-                {/* Use optional chaining for safety */}
-                <h3 className="text-xl font-bold text-white">{selectedChat.chatName}</h3>
-                <button 
-                    onClick={() => setIsOpen(false)}
-                    className="text-slate-400 hover:text-white transition"
-                >
-                    <AiOutlineClose size={20} />
-                </button>
+            <div className="flex items-center justify-between p-5 border-b border-dark-border bg-dark-bg/50">
+              <div>
+                <h3 className="text-lg font-bold text-white">{selectedChat.chatName}</h3>
+                <p className="text-xs text-slate-500">{selectedChat.users.length} members</p>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-dark-hover rounded-lg transition"
+              >
+                <FaTimes />
+              </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 flex flex-col gap-6">
-                
-                {/* Current Members List */}
-                <div className="flex flex-wrap gap-1">
-                    {selectedChat.users.map((u: User) => (
-                        <UserBadgeItem
-                            key={u._id}
-                            user={u}
-                            handleFunction={() => handleRemove(u)}
-                        />
-                    ))}
+            <div className="p-5 space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              {/* Members */}
+              <div>
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Members</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedChat.users.map((u: User) => (
+                    <UserBadgeItem
+                      key={u._id}
+                      user={u}
+                      isAdmin={selectedChat.groupAdmin?._id === u._id}
+                      handleFunction={() => handleRemove(u)}
+                    />
+                  ))}
                 </div>
+              </div>
 
-                {/* Rename Section */}
+              {/* Rename Group */}
+              <div>
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <FaEdit size={10} /> Rename Group
+                </h4>
                 <div className="flex gap-2">
-                    <input 
-                        className="w-full bg-dark-bg border border-dark-border text-white p-3 rounded-lg outline-none focus:border-brand focus:ring-1 focus:ring-brand placeholder-slate-500 transition"
-                        placeholder="Rename Group..."
-                        value={groupChatName}
-                        onChange={(e) => setGroupChatName(e.target.value)}
-                    />
-                    <button 
-                        onClick={handleRename}
-                        disabled={renameloading}
-                        className="bg-brand hover:bg-brand-hover text-white px-4 rounded-lg font-medium transition disabled:opacity-50"
-                    >
-                        {renameloading ? "..." : "Update"}
-                    </button>
+                  <input
+                    className="flex-1 bg-dark-bg border border-dark-border text-white p-3 rounded-xl outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 placeholder-slate-500 transition text-sm"
+                    placeholder="New group name..."
+                    value={groupChatName}
+                    onChange={(e) => setGroupChatName(e.target.value)}
+                  />
+                  <button
+                    onClick={handleRename}
+                    disabled={renameLoading || !groupChatName.trim()}
+                    className="bg-brand hover:bg-brand-hover text-white px-4 rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {renameLoading ? <FaSpinner className="animate-spin" /> : "Save"}
+                  </button>
                 </div>
+              </div>
 
-                {/* Add User Section */}
-                <div>
-                     <input 
-                        className="w-full bg-dark-bg border border-dark-border text-white p-3 rounded-lg outline-none focus:border-brand focus:ring-1 focus:ring-brand placeholder-slate-500 transition mb-3"
-                        placeholder="Add User to Group"
-                        value={search} 
-                        onChange={(e) => handleSearch(e.target.value)}
-                    />
-                     
-                     {/* Search Results */}
-                     <div className="max-h-40 overflow-y-auto custom-scrollbar">
-                        {loading ? (
-                            <div className="text-center text-slate-500 text-sm">Loading...</div>
-                        ) : (
-                            searchResult?.slice(0, 4).map((u: User) => (
-                                <UserListItem
-                                    key={u._id}
-                                    user={u}
-                                    handleFunction={() => handleAddUser(u)}
-                                />
-                            ))
-                        )}
+              {/* Add Members */}
+              <div>
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <FaUserPlus size={10} /> Add Members
+                </h4>
+                <input
+                  className="w-full bg-dark-bg border border-dark-border text-white p-3 rounded-xl outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 placeholder-slate-500 transition text-sm"
+                  placeholder="Search users to add..."
+                  value={search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+
+                {/* Search Results */}
+                <div className="mt-3 space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
+                  {loading ? (
+                    <div className="flex items-center justify-center py-4 gap-2 text-slate-500">
+                      <FaSpinner className="animate-spin" />
+                      <span className="text-sm">Searching...</span>
                     </div>
+                  ) : (
+                    searchResult?.slice(0, 4).map((u: User) => (
+                      <UserListItem
+                        key={u._id}
+                        user={u}
+                        handleFunction={() => handleAddUser(u)}
+                      />
+                    ))
+                  )}
                 </div>
+              </div>
             </div>
 
             {/* Footer */}
-            <div className="p-5 border-t border-dark-border flex justify-end bg-dark-bg/50">
-                <button 
-                    onClick={() => user && handleRemove(user)} 
-                    className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50 font-medium py-2 px-6 rounded-lg transition"
-                >
-                    Leave Group
-                </button>
+            <div className="p-5 border-t border-dark-border bg-dark-bg/50">
+              <button
+                onClick={() => user && handleRemove(user)}
+                className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-medium py-3 rounded-xl transition"
+              >
+                <FaSignOutAlt />
+                Leave Group
+              </button>
             </div>
           </div>
         </div>

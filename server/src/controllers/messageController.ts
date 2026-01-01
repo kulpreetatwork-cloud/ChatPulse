@@ -10,7 +10,9 @@ export const allMessages = async (req: Request, res: Response): Promise<void> =>
   try {
     const messages = await Message.find({ chat: req.params.chatId })
       .populate("sender", "name pic email")
-      .populate("chat");
+      .populate("chat")
+      .populate("reactions.user", "name pic")
+      .populate("readBy", "name pic");
 
     res.json(messages);
   } catch (error: any) {
@@ -34,6 +36,7 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
     sender: req.user._id,
     content: content,
     chat: chatId,
+    readBy: [req.user._id], // Sender has read their own message
   };
 
   try {
@@ -55,6 +58,83 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
     });
 
     res.json(message);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Add/Toggle Reaction on a Message
+// @route   PUT /api/message/:messageId/react
+// @access  Protected
+export const toggleReaction = async (req: Request, res: Response): Promise<void> => {
+  const { messageId } = req.params;
+  const { emoji } = req.body;
+  const userId = req.user._id;
+
+  if (!emoji) {
+    res.status(400).json({ message: "Emoji is required" });
+    return;
+  }
+
+  try {
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      res.status(404).json({ message: "Message not found" });
+      return;
+    }
+
+    // Check if user already reacted with this emoji
+    const existingReactionIndex = message.reactions.findIndex(
+      (r) => r.user.toString() === userId.toString() && r.emoji === emoji
+    );
+
+    if (existingReactionIndex > -1) {
+      // Remove reaction (toggle off)
+      message.reactions.splice(existingReactionIndex, 1);
+    } else {
+      // Remove any existing reaction from this user (one reaction per user)
+      message.reactions = message.reactions.filter(
+        (r) => r.user.toString() !== userId.toString()
+      );
+      // Add new reaction
+      message.reactions.push({ user: userId, emoji });
+    }
+
+    await message.save();
+
+    // Populate and return updated message
+    const updatedMessage = await Message.findById(messageId)
+      .populate("sender", "name pic")
+      .populate("reactions.user", "name pic")
+      .populate("chat");
+
+    res.json(updatedMessage);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Mark messages as read
+// @route   PUT /api/message/read/:chatId
+// @access  Protected
+export const markAsRead = async (req: Request, res: Response): Promise<void> => {
+  const { chatId } = req.params;
+  const userId = req.user._id;
+
+  try {
+    // Update all messages in this chat to include this user in readBy
+    await Message.updateMany(
+      {
+        chat: chatId,
+        readBy: { $ne: userId } // Only update messages not already read by this user
+      },
+      {
+        $addToSet: { readBy: userId }
+      }
+    );
+
+    res.json({ success: true });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
   }

@@ -7,6 +7,8 @@ export interface IUser extends Document {
   email: string;
   password: string;
   pic: string;
+  isOnline: boolean;
+  lastSeen: Date;
   matchPassword: (enteredPassword: string) => Promise<boolean>;
 }
 
@@ -22,6 +24,8 @@ const userSchema = new Schema(
       default:
         "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
     },
+    isOnline: { type: Boolean, default: false },
+    lastSeen: { type: Date, default: Date.now },
   },
   {
     timestamps: true, // Automatically creates createdAt and updatedAt fields

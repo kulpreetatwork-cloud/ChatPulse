@@ -6,8 +6,9 @@ import connectDB from "./config/db";
 import userRoutes from "./routes/userRoutes";
 import chatRoutes from "./routes/chatRoutes";
 import messageRoutes from "./routes/messageRoutes";
-import { Server } from "socket.io"; 
+import { Server } from "socket.io";
 import uploadRoutes from "./routes/uploadRoutes";
+import User from "./models/userModel";
 
 // 1. Load Environment Variables
 dotenv.config();
@@ -18,14 +19,13 @@ const app = express();
 // --- 3. CORS CONFIGURATION (CRITICAL FIXES) ---
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://chat-pulse-seven.vercel.app" // REMOVED trailing slash '/'
+  "https://chat-pulse-seven.vercel.app"
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
@@ -33,11 +33,10 @@ app.use(cors({
     return callback(null, true);
   },
   credentials: true,
-  // FIX: Explicitly allow Authorization header so the token is passed
-  allowedHeaders: ["Content-Type", "Authorization"] 
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-app.use(express.json()); 
+app.use(express.json());
 app.use(cookieParser());
 
 // 4. Routes
@@ -50,31 +49,50 @@ app.use("/api/upload", uploadRoutes);
 // 5. Connect to Database and Start Server
 const PORT = process.env.PORT || 5000;
 
+// Track connected users: { odatabaseUserId: Set of socketIds }
+const onlineUsers = new Map<string, Set<string>>();
+
 const startServer = async () => {
   await connectDB();
-  
-  // Store the server instance
+
   const server = app.listen(PORT, () => {
-      console.log(`\n🚀 Server running on port ${PORT}`);
+    console.log(`\n🚀 Server running on port ${PORT}`);
   });
 
   // --- SOCKET.IO SETUP ---
   const io = new Server(server, {
-    pingTimeout: 60000, 
+    pingTimeout: 60000,
     cors: {
-      // FIX: Use the variable allowedOrigins, NOT hardcoded localhost
-      origin: allowedOrigins, 
+      origin: allowedOrigins,
       credentials: true,
-      allowedHeaders: ["Content-Type", "Authorization"], 
+      allowedHeaders: ["Content-Type", "Authorization"],
     },
   });
 
   io.on("connection", (socket) => {
     console.log("Connected to socket.io");
 
+    let currentUserId: string | null = null;
+
     // A. Setup: User connects and joins their own room
-    socket.on("setup", (userData) => {
+    socket.on("setup", async (userData) => {
+      if (!userData?._id) return;
+
+      currentUserId = userData._id;
       socket.join(userData._id);
+
+      // Track this socket connection
+      if (!onlineUsers.has(userData._id)) {
+        onlineUsers.set(userData._id, new Set());
+      }
+      onlineUsers.get(userData._id)!.add(socket.id);
+
+      // Update user online status in database
+      await User.findByIdAndUpdate(userData._id, { isOnline: true });
+
+      // Broadcast online status to all connected users
+      io.emit("user status", { userId: userData._id, isOnline: true });
+
       socket.emit("connected");
     });
 
@@ -95,18 +113,63 @@ const startServer = async () => {
       if (!chat.users) return console.log("chat.users not defined");
 
       chat.users.forEach((user: any) => {
-        // Don't send the message back to the sender
         if (user._id == newMessageRecieved.sender._id) return;
-
-        // Send to the specific user's room
         socket.in(user._id).emit("message received", newMessageRecieved);
       });
     });
 
-    // D. Cleanup (Optional)
-    socket.off("setup", (userData) => {
-      console.log("USER DISCONNECTED");
-      socket.leave(userData._id);
+    // F. Reaction Update: Broadcast reaction changes to chat participants
+    socket.on("reaction update", (data) => {
+      const { message, chatUsers } = data;
+      if (!chatUsers) return;
+
+      chatUsers.forEach((user: any) => {
+        socket.in(user._id).emit("reaction updated", message);
+      });
+    });
+
+    // G. Messages Read: Notify sender that their messages have been read
+    socket.on("messages read", (data) => {
+      const { chatId, readByUser, chatUsers } = data;
+      if (!chatUsers) return;
+
+      chatUsers.forEach((user: any) => {
+        if (user._id !== readByUser._id) {
+          socket.in(user._id).emit("messages marked read", { chatId, readByUser });
+        }
+      });
+    });
+
+    // H. Get online status of specific users
+    socket.on("get online users", (userIds: string[]) => {
+      const statuses = userIds.map((id) => ({
+        userId: id,
+        isOnline: onlineUsers.has(id) && onlineUsers.get(id)!.size > 0,
+      }));
+      socket.emit("online users", statuses);
+    });
+
+    // D. Disconnect: Update user status
+    socket.on("disconnect", async () => {
+      if (currentUserId) {
+        const userSockets = onlineUsers.get(currentUserId);
+        if (userSockets) {
+          userSockets.delete(socket.id);
+
+          // Only mark offline if no other sockets are connected for this user
+          if (userSockets.size === 0) {
+            onlineUsers.delete(currentUserId);
+            await User.findByIdAndUpdate(currentUserId, {
+              isOnline: false,
+              lastSeen: new Date(),
+            });
+
+            // Broadcast offline status
+            io.emit("user status", { userId: currentUserId, isOnline: false });
+          }
+        }
+        console.log("USER DISCONNECTED:", currentUserId);
+      }
     });
   });
 };

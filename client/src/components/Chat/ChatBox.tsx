@@ -2,8 +2,8 @@ import useChatStore from "../../store/chatStore";
 import SingleChat from "./SingleChat";
 
 interface ChatBoxProps {
-    fetchAgain: boolean;
-    setFetchAgain: React.Dispatch<React.SetStateAction<boolean>>;
+  fetchAgain: boolean;
+  setFetchAgain: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const ChatBox = ({ fetchAgain, setFetchAgain }: ChatBoxProps) => {
@@ -11,9 +11,8 @@ const ChatBox = ({ fetchAgain, setFetchAgain }: ChatBoxProps) => {
 
   return (
     <div
-      className={`${
-        selectedChat ? "flex" : "hidden md:flex"
-      } flex-col bg-dark-surface w-full md:w-[68%] rounded-xl border border-dark-border h-full overflow-hidden shadow-xl`}
+      className={`${selectedChat ? "flex" : "hidden md:flex"
+        } flex-1 flex-col bg-dark-surface/60 backdrop-blur-sm rounded-2xl border border-dark-border overflow-hidden shadow-glass transition-all duration-300`}
     >
       <SingleChat fetchAgain={fetchAgain} setFetchAgain={setFetchAgain} />
     </div>
