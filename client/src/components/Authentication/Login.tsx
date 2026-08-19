@@ -125,23 +125,6 @@ const Login = () => {
         )}
       </button>
 
-      {/* Divider */}
-      <div className="flex items-center gap-4 my-1">
-        <div className="flex-1 h-px bg-dark-border" />
-        <span className="text-slate-500 text-sm">or</span>
-        <div className="flex-1 h-px bg-dark-border" />
-      </div>
-
-      {/* Guest Button */}
-      <button
-        onClick={() => {
-          setFormData({ email: "guest@example.com", password: "123" });
-          toast("Guest credentials filled!", { icon: "👻" });
-        }}
-        className="w-full bg-dark-hover hover:bg-dark-muted text-slate-300 font-semibold py-3 rounded-xl transition-all duration-300 border border-dark-border hover:border-brand/30"
-      >
-        Try as Guest
-      </button>
     </div>
   );
 };
